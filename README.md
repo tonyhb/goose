@@ -1,3 +1,13 @@
+# Note
+
+This repo is a fork of the original, which **[you can get
+here](https://bitbucket.org/liamstask/goose)**. The changes are as follows:
+
+* Use TOML configuration files (instead of YAML)
+* Use separate configuration files depending on the environment
+* Look for different configuration variables (eg. DSN vs open)
+* Use the current folder as the base for "db" related files (instead of "db")
+
 # goose
 
 goose is a database migration tool.

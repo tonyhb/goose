@@ -1,10 +1,11 @@
 package goose
 
 import (
+	"github.com/lib/pq"
+	toml "github.com/pelletier/go-toml"
+
 	"errors"
 	"fmt"
-	"github.com/kylelemons/go-gypsy/yaml"
-	"github.com/lib/pq"
 	"os"
 	"path/filepath"
 )
@@ -27,20 +28,20 @@ type DBConf struct {
 // extract configuration details from the given file
 func NewDBConf(p, env string) (*DBConf, error) {
 
-	cfgFile := filepath.Join(p, "dbconf.yml")
+	cfgFile := filepath.Join(p, "config", env+".toml")
 
-	f, err := yaml.ReadFile(cfgFile)
+	config, err := toml.LoadFile(cfgFile)
 	if err != nil {
 		return nil, err
 	}
 
-	drv, err := f.Get(fmt.Sprintf("%s.driver", env))
-	if err != nil {
+	drv, ok := config.Get("db.driver").(string)
+	if ! ok {
 		return nil, err
 	}
 
-	open, err := f.Get(fmt.Sprintf("%s.open", env))
-	if err != nil {
+	open, ok := config.Get("db.dsn").(string)
+	if ! ok {
 		return nil, err
 	}
 	open = os.ExpandEnv(open)
@@ -57,12 +58,12 @@ func NewDBConf(p, env string) (*DBConf, error) {
 	d := newDBDriver(drv, open)
 
 	// allow the configuration to override the Import for this driver
-	if imprt, err := f.Get(fmt.Sprintf("%s.import", env)); err == nil {
+	if imprt, ok := config.Get("migrate.import").(string); ok {
 		d.Import = imprt
 	}
 
 	// allow the configuration to override the Dialect for this driver
-	if dialect, err := f.Get(fmt.Sprintf("%s.dialect", env)); err == nil {
+	if dialect, ok := config.Get("migrate.dialect").(string); ok {
 		d.Dialect = dialectByName(dialect)
 	}
 
@@ -94,6 +95,10 @@ func newDBDriver(name, open string) DBDriver {
 
 	case "mymysql":
 		d.Import = "github.com/ziutek/mymysql/godrv"
+		d.Dialect = &MySqlDialect{}
+	
+	case "mysql":
+		d.Import = "github.com/go-sql-driver/mysql"
 		d.Dialect = &MySqlDialect{}
 	}
 
